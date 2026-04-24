@@ -4,7 +4,7 @@ import { logger } from "../../lib/logger/logger.js";
 import { checkoutService } from "./checkout.service.js";
 import { startCheckoutBodySchema, startCheckoutHeadersSchema } from "./checkout.validation.js";
 
-export async function startCheckoutHandler(req: Request, res: Response): Promise<void> {
+export async function createCheckoutSessionHandler(req: Request, res: Response): Promise<void> {
   const parsedHeaders = startCheckoutHeadersSchema.safeParse(req.headers);
   const parsedBody = startCheckoutBodySchema.safeParse(req.body);
 
@@ -19,7 +19,7 @@ export async function startCheckoutHandler(req: Request, res: Response): Promise
     return;
   }
 
-  const result = await checkoutService.startCheckout({
+  const result = await checkoutService.createCheckoutSession({
     idempotencyKey: parsedHeaders.data["idempotency-key"],
     email: parsedBody.data.email,
     planCode: parsedBody.data.planCode,

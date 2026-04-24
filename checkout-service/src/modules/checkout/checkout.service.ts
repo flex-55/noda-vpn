@@ -12,8 +12,8 @@ import { notificationService } from "../notification/notification.service.js";
 import type {
   HandleWebhookInput,
   ResumeCheckoutWorkflowInput,
-  StartCheckoutInput,
-  StartCheckoutResult,
+  CreateCheckoutSessionInput,
+  CreateCheckoutSessionResponse,
 } from "./checkout.types.js";
 
 const PLAN_PRICES: Record<string, { monthly: number; yearly: number }> = {
@@ -46,12 +46,12 @@ function resolveAmount(planCode: PlanCode, billingCycle: BillingCycle): number {
   return plan[billingCycle];
 }
 
-function toStartCheckoutResult(checkout: {
+function mapCheckoutSessionResponse(checkout: {
   id: string;
-  status: keyof typeof CHECKOUT_STATUS;
+  status: string;
   stripePaymentIntentId: string | null;
   clientSecret: string | null;
-}): StartCheckoutResult {
+}): CreateCheckoutSessionResponse {
   if (!checkout.stripePaymentIntentId || !checkout.clientSecret) {
     throw new Error("Checkout was created without payment intent metadata");
   }
@@ -64,7 +64,7 @@ function toStartCheckoutResult(checkout: {
   };
 }
 
-async function startCheckout(input: StartCheckoutInput): Promise<StartCheckoutResult> {
+async function createCheckoutSession(input: CreateCheckoutSessionInput): Promise<CreateCheckoutSessionResponse> {
   const existing = await prisma.checkoutSession.findUnique({
     where: {
       idempotencyKey: input.idempotencyKey,
@@ -78,12 +78,13 @@ async function startCheckout(input: StartCheckoutInput): Promise<StartCheckoutRe
   });
 
   if (existing?.stripePaymentIntentId && existing.clientSecret) {
-    return toStartCheckoutResult(existing);
+    return mapCheckoutSessionResponse(existing);
   }
 
   const amount = resolveAmount(input.planCode, input.billingCycle);
 
   try {
+    // Create checkout session record in DB with PENDING_PAYMENT status
     const checkout =
       existing ??
       (await prisma.checkoutSession.create({
@@ -102,7 +103,8 @@ async function startCheckout(input: StartCheckoutInput): Promise<StartCheckoutRe
         },
       }));
 
-    const paymentIntent = await stripeClient.paymentIntents.create({
+    // Create Stripe Payment Intent with metadata linking back to our checkout session
+      const paymentIntent = await stripeClient.paymentIntents.create({
       amount,
       currency: "usd",
       automatic_payment_methods: {
@@ -117,6 +119,7 @@ async function startCheckout(input: StartCheckoutInput): Promise<StartCheckoutRe
     });
 
     const updatedCheckout = await prisma.$transaction(async (tx) => {
+      // Create payment record linked to checkout session
       await tx.payment.create({
         data: {
           checkoutId: checkout.id,
@@ -128,6 +131,7 @@ async function startCheckout(input: StartCheckoutInput): Promise<StartCheckoutRe
         },
       });
 
+      // Update checkout session with Stripe payment intent details and return updated record
       return tx.checkoutSession.update({
         where: {
           id: checkout.id,
@@ -145,7 +149,7 @@ async function startCheckout(input: StartCheckoutInput): Promise<StartCheckoutRe
       });
     });
 
-    return toStartCheckoutResult(updatedCheckout);
+    return mapCheckoutSessionResponse(updatedCheckout);
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
       const concurrent = await prisma.checkoutSession.findUnique({
@@ -161,7 +165,7 @@ async function startCheckout(input: StartCheckoutInput): Promise<StartCheckoutRe
       });
 
       if (concurrent?.stripePaymentIntentId && concurrent.clientSecret) {
-        return toStartCheckoutResult(concurrent);
+        return mapCheckoutSessionResponse(concurrent);
       }
     }
 
@@ -361,7 +365,7 @@ async function compensateFailedCheckout(input: { checkoutId: string; errorMessag
 }
 
 export const checkoutService = {
-  startCheckout,
+  createCheckoutSession,
   handleStripeWebhook,
   resumeCheckoutWorkflow,
   compensateFailedCheckout,

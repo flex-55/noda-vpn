@@ -1,19 +1,14 @@
 import { Queue } from "bullmq";
-import { Redis } from "ioredis";
-import { env } from "../config/env.js";
+import { redis } from "../redis/redis.js";
 
 export const CHECKOUT_QUEUE_NAME = "checkout-workflow";
 export const CHECKOUT_JOB_NAME = "resume-checkout";
-
-const connection = new Redis(env.REDIS_URL, {
-  maxRetriesPerRequest: null,
-});
 
 export const checkoutQueue = new Queue<{
   checkoutId: string;
   stripeEventId: string;
 }>(CHECKOUT_QUEUE_NAME, {
-  connection,
+  connection: redis,
   defaultJobOptions: {
     attempts: 10,
     removeOnComplete: 1000,
