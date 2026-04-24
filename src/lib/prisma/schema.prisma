@@ -1,0 +1,105 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model CheckoutSession {
+  id                    String         @id @default(cuid())
+  idempotencyKey        String         @unique
+  email                 String
+  planCode              String
+  billingCycle          String
+  status                String         @default("PENDING_PAYMENT")
+  stripePaymentIntentId String?        @unique
+  clientSecret          String?
+  lastError             String?
+  workflowAttempts      Int            @default(0)
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+
+  payment       Payment?
+  license       VPNLicense?
+  subscription  Subscription?
+  identity      Identity?
+  notifications Notification[]
+  stripeEvents  StripeEvent[]
+}
+
+model Payment {
+  id                      String        @id @default(cuid())
+  checkoutId              String        @unique
+  provider                String        @default("stripe")
+  providerPaymentIntentId String        @unique
+  amount                  Int
+  currency                String
+  status                  String        @default("PENDING")
+  paidAt                  DateTime?
+  createdAt               DateTime      @default(now())
+  updatedAt               DateTime      @updatedAt
+
+  checkout CheckoutSession @relation(fields: [checkoutId], references: [id], onDelete: Cascade)
+}
+
+model StripeEvent {
+  id          String   @id
+  type        String
+  payload     String
+  status      String   @default("RECEIVED")
+  checkoutId  String?
+  processedAt DateTime?
+  receivedAt  DateTime @default(now())
+
+  checkout CheckoutSession? @relation(fields: [checkoutId], references: [id], onDelete: SetNull)
+}
+
+model VPNLicense {
+  id         String   @id @default(cuid())
+  checkoutId String   @unique
+  licenseKey String   @unique
+  status     String
+  createdAt  DateTime @default(now())
+
+  checkout CheckoutSession @relation(fields: [checkoutId], references: [id], onDelete: Cascade)
+}
+
+model Subscription {
+  id           String   @id @default(cuid())
+  checkoutId   String   @unique
+  planCode     String
+  billingCycle String
+  status       String
+  startsAt     DateTime @default(now())
+  endsAt       DateTime?
+  createdAt    DateTime @default(now())
+
+  checkout CheckoutSession @relation(fields: [checkoutId], references: [id], onDelete: Cascade)
+}
+
+model Identity {
+  id               String   @id @default(cuid())
+  checkoutId       String   @unique
+  email            String
+  temporarySecret  String
+  activationStatus String
+  createdAt        DateTime @default(now())
+
+  checkout CheckoutSession @relation(fields: [checkoutId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id         String   @id @default(cuid())
+  checkoutId String
+  type       String
+  payload    String
+  status     String
+  sentAt     DateTime?
+  createdAt  DateTime @default(now())
+
+  checkout CheckoutSession @relation(fields: [checkoutId], references: [id], onDelete: Cascade)
+
+  @@index([checkoutId])
+}

@@ -1,0 +1,4 @@
+
+> noda-vpn-checkout-service@1.0.0 typecheck /Users/moses/Desktop/folder/projects/ai-data-training/noda-vpn
+> tsc --noEmit
+

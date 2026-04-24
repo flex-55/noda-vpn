@@ -1,0 +1,35 @@
+{
+  "name": "noda-vpn-checkout-service",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/server.js",
+    "worker:dev": "tsx watch src/lib/queues/checkout.worker.ts",
+    "worker:start": "node dist/lib/queues/checkout.worker.js",
+    "prisma:generate": "prisma generate --schema src/lib/prisma/schema.prisma",
+    "prisma:migrate": "prisma migrate dev --schema src/lib/prisma/schema.prisma --name init",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.22.0",
+    "bullmq": "^5.12.12",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "ioredis": "^5.4.1",
+    "pino": "^9.3.2",
+    "pino-http": "^10.3.0",
+    "stripe": "^16.9.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.7.4",
+    "pino-pretty": "^11.2.2",
+    "prisma": "^5.22.0",
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.2"
+  }
+}
