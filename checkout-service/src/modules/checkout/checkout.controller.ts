@@ -29,6 +29,24 @@ export async function createCheckoutSessionHandler(req: Request, res: Response):
   res.status(200).json(result);
 }
 
+export async function getCheckoutStatusHandler(req: Request, res: Response): Promise<void> {
+  const checkoutId = req.params.checkoutId;
+
+  if (!checkoutId) {
+    res.status(400).json({ error: "Missing checkoutId" });
+    return;
+  }
+
+  const result = await checkoutService.getCheckoutStatus(checkoutId);
+
+  if (!result) {
+    res.status(404).json({ error: "Checkout not found" });
+    return;
+  }
+
+  res.status(200).json(result);
+}
+
 export async function handleStripeWebhook(req: Request, res: Response): Promise<void> {
   try {
     const event = constructStripeEvent(req);

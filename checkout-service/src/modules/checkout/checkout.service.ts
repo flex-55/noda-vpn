@@ -14,6 +14,7 @@ import type {
   ResumeCheckoutWorkflowInput,
   CreateCheckoutSessionInput,
   CreateCheckoutSessionResponse,
+  GetCheckoutStatusResponse,
 } from "./checkout.types.js";
 
 const PLAN_PRICES: Record<string, { monthly: number; yearly: number }> = {
@@ -61,6 +62,20 @@ function mapCheckoutSessionResponse(checkout: {
     status: checkout.status,
     paymentIntentId: checkout.stripePaymentIntentId,
     clientSecret: checkout.clientSecret,
+  };
+}
+
+function mapCheckoutStatusResponse(checkout: {
+  id: string;
+  status: string;
+  lastError: string | null;
+  workflowAttempts: number;
+}): GetCheckoutStatusResponse {
+  return {
+    checkoutId: checkout.id,
+    status: checkout.status,
+    lastError: checkout.lastError,
+    workflowAttempts: checkout.workflowAttempts,
   };
 }
 
@@ -172,6 +187,26 @@ async function createCheckoutSession(input: CreateCheckoutSessionInput): Promise
     logger.error({ err: error, idempotencyKey: input.idempotencyKey }, "Failed to start checkout");
     throw error;
   }
+}
+
+async function getCheckoutStatus(checkoutId: string): Promise<GetCheckoutStatusResponse | null> {
+  const checkout = await prisma.checkoutSession.findUnique({
+    where: {
+      id: checkoutId,
+    },
+    select: {
+      id: true,
+      status: true,
+      lastError: true,
+      workflowAttempts: true,
+    },
+  });
+
+  if (!checkout) {
+    return null;
+  }
+
+  return mapCheckoutStatusResponse(checkout);
 }
 
 async function handleStripeWebhook(input: HandleWebhookInput): Promise<void> {
@@ -366,6 +401,7 @@ async function compensateFailedCheckout(input: { checkoutId: string; errorMessag
 
 export const checkoutService = {
   createCheckoutSession,
+  getCheckoutStatus,
   handleStripeWebhook,
   resumeCheckoutWorkflow,
   compensateFailedCheckout,

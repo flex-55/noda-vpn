@@ -1,0 +1,5 @@
+
+> noda-vpn-web-app@1.0.0 typecheck /Users/moses/Desktop/folder/projects/ai-data-training/noda-vpn/web-app
+> tsc --noEmit
+
+ ELIFECYCLE  Command failed.

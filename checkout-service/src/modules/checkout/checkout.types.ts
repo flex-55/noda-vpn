@@ -15,6 +15,13 @@ export type CreateCheckoutSessionResponse = {
   clientSecret: string;
 };
 
+export type GetCheckoutStatusResponse = {
+  checkoutId: string;
+  status: string;
+  lastError: string | null;
+  workflowAttempts: number;
+};
+
 export type HandleWebhookInput = {
   event: Stripe.Event;
 };
