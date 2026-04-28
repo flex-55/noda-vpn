@@ -1,5 +1,8 @@
 import { Router } from "express";
-import { createCheckoutSessionHandler, getCheckoutStatusHandler } from "./checkout.controller.js";
+import { 
+  createCheckoutSessionHandler, 
+  getCheckoutStatusHandler, 
+} from "./checkout.controller.js";
 
 const checkoutRouter = Router();
 

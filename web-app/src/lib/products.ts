@@ -57,7 +57,7 @@ export function normalizePlanIdParam(value?: string): ProductPlanId | null {
     return value;
   }
 
-  if (value === "vpn_premium" || value === "vpn_pro") {
+  if (value === "vpn_premium") {
     return "vpn_premium";
   }
 
@@ -82,8 +82,8 @@ export function getProductBySelection(planId: ProductPlanId, billingCycle: Produ
   return products.find((product) => product.planId === planId && product.billingCycle === billingCycle) ?? null;
 }
 
-export function toBackendPlanCode(planId: ProductPlanId): "vpn_basic" | "vpn_pro" {
-  return planId === "vpn_premium" ? "vpn_pro" : "vpn_basic";
+export function toBackendPlanCode(planId: ProductPlanId): "vpn_basic" | "vpn_premium" {
+  return planId === "vpn_premium" ? "vpn_premium" : "vpn_basic";
 }
 
 export function toBackendBillingCycle(billingCycle: ProductBillingCycle): "monthly" | "yearly" {

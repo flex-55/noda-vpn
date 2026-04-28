@@ -1,9 +1,13 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_CHECKOUT_API_BASE_URL ?? "http://localhost:4242";
+const API_BASE_URL = process.env.NEXT_PUBLIC_CHECKOUT_API_BASE_URL ?? "http://localhost:3000";
+
+function toNetworkErrorMessage(action: string): string {
+  return `${action} Network error: could not reach checkout API at ${API_BASE_URL}. Ensure checkout-service is running and this URL is correct.`;
+}
 
 export type CreateCheckoutSessionRequest = {
   idempotencyKey: string;
   email: string;
-  planCode: "vpn_basic" | "vpn_pro";
+  planCode: "vpn_basic" | "vpn_premium";
   billingCycle: "monthly" | "yearly";
 };
 
@@ -24,18 +28,24 @@ export type CheckoutStatusResponse = {
 export async function createCheckoutSession(
   input: CreateCheckoutSessionRequest,
 ): Promise<CreateCheckoutSessionResponse> {
-  const response = await fetch(`${API_BASE_URL}/checkout/sessions`, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      "idempotency-key": input.idempotencyKey,
-    },
-    body: JSON.stringify({
-      email: input.email,
-      planCode: input.planCode,
-      billingCycle: input.billingCycle,
-    }),
-  });
+  let response: Response;
+
+  try {
+    response = await fetch(`${API_BASE_URL}/checkout/sessions`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "idempotency-key": input.idempotencyKey,
+      },
+      body: JSON.stringify({
+        email: input.email,
+        planCode: input.planCode,
+        billingCycle: input.billingCycle,
+      }),
+    });
+  } catch {
+    throw new Error(toNetworkErrorMessage("Could not create checkout session."));
+  }
 
   if (!response.ok) {
     throw new Error(await toApiErrorMessage(response, "Could not create checkout session."));
@@ -45,15 +55,42 @@ export async function createCheckoutSession(
 }
 
 export async function getCheckoutStatus(checkoutId: string): Promise<CheckoutStatusResponse> {
-  const response = await fetch(`${API_BASE_URL}/checkout/sessions/${checkoutId}`, {
-    method: "GET",
-    headers: {
-      "content-type": "application/json",
-    },
-  });
+  let response: Response;
+
+  try {
+    response = await fetch(`${API_BASE_URL}/checkout/sessions/${checkoutId}`, {
+      method: "GET",
+      headers: {
+        "content-type": "application/json",
+      },
+    });
+  } catch {
+    throw new Error(toNetworkErrorMessage("Could not fetch checkout status."));
+  }
 
   if (!response.ok) {
     throw new Error(await toApiErrorMessage(response, "Could not fetch checkout status."));
+  }
+
+  return response.json();
+}
+
+export async function verifyPayment(checkoutId: string): Promise<{ checkoutId: string; paymentVerified: boolean }> {
+  let response: Response;
+
+  try {
+    response = await fetch(`${API_BASE_URL}/checkout/sessions/${checkoutId}/verify-payment`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+    });
+  } catch {
+    throw new Error(toNetworkErrorMessage("Could not verify payment."));
+  }
+
+  if (!response.ok) {
+    throw new Error(await toApiErrorMessage(response, "Could not verify payment."));
   }
 
   return response.json();

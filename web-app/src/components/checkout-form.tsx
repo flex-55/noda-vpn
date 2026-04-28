@@ -5,7 +5,7 @@ import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { createCheckoutSession } from "@/lib/api";
 import { Product, toBackendBillingCycle, toBackendPlanCode } from "@/lib/products";
-import { getOrCreateIdempotencyKey } from "@/lib/utils";
+import { clearCheckoutKeys, getOrCreateIdempotencyKey } from "@/lib/utils";
 import { StripePaymentForm } from "@/components/stripe-payment-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -43,6 +43,11 @@ export function CheckoutForm({ product }: CheckoutFormProps) {
       });
     },
   });
+
+  function handleRestartCheckout() {
+    clearCheckoutKeys();
+    setCheckoutSession(null);
+  }
 
   return (
     <div className="grid gap-8 lg:grid-cols-[0.95fr_1.05fr]">
@@ -117,6 +122,7 @@ export function CheckoutForm({ product }: CheckoutFormProps) {
               checkoutId={checkoutSession.checkoutId}
               clientSecret={checkoutSession.clientSecret}
               email={email}
+              onRestartCheckout={handleRestartCheckout}
             />
           )}
         </CardContent>

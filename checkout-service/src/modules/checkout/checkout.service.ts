@@ -22,7 +22,7 @@ const PLAN_PRICES: Record<string, { monthly: number; yearly: number }> = {
     monthly: 999,
     yearly: 9990,
   },
-  vpn_pro: {
+  vpn_premium: {
     monthly: 1499,
     yearly: 14990,
   },
@@ -213,6 +213,8 @@ async function handleStripeWebhook(input: HandleWebhookInput): Promise<void> {
   if (!isPaymentIntentSucceededEvent(input.event)) {
     return;
   }
+
+  console.log("Received Stripe webhook event:", input.event.type, "for PaymentIntent:", input.event.data.object.id);
 
   const event = input.event;
   const paymentIntentId = event.data.object.id;

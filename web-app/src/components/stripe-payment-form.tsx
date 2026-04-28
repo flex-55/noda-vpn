@@ -10,9 +10,10 @@ type StripePaymentFormProps = {
   checkoutId: string;
   clientSecret: string;
   email: string;
+  onRestartCheckout: () => void;
 };
 
-export function StripePaymentForm({ checkoutId, clientSecret, email }: StripePaymentFormProps) {
+export function StripePaymentForm({ checkoutId, clientSecret, email, onRestartCheckout }: StripePaymentFormProps) {
   const stripePromise = getStripePromise();
 
   const options = useMemo(
@@ -32,22 +33,39 @@ export function StripePaymentForm({ checkoutId, clientSecret, email }: StripePay
   );
 
   if (!stripePromise) {
-    return <div className="rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-700">Missing Stripe publishable key configuration.</div>;
+    return (
+      <div className="rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-700">
+        Missing Stripe publishable key configuration. Restart the web app after updating .env.local.
+      </div>
+    );
   }
 
   return (
-    <Elements options={options} stripe={stripePromise}>
-      <StripePaymentFormInner checkoutId={checkoutId} email={email} />
+    <Elements key={clientSecret} options={options} stripe={stripePromise}>
+      <StripePaymentFormInner checkoutId={checkoutId} email={email} onRestartCheckout={onRestartCheckout} />
     </Elements>
   );
 }
 
-function StripePaymentFormInner({ checkoutId, email }: { checkoutId: string; email: string }) {
+function StripePaymentFormInner({
+  checkoutId,
+  email,
+  onRestartCheckout,
+}: {
+  checkoutId: string;
+  email: string;
+  onRestartCheckout: () => void;
+}) {
   const router = useRouter();
   const stripe = useStripe();
   const elements = useElements();
   const [message, setMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isElementReady, setIsElementReady] = useState(false);
+
+  const isPaymentElementLoading = !isElementReady;
+  const needsFreshCheckoutSession =
+    message?.includes("does not match any associated PaymentIntent on this account") ?? false;
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -88,12 +106,46 @@ function StripePaymentFormInner({ checkoutId, email }: { checkoutId: string; ema
   return (
     <form className="space-y-6" onSubmit={(event) => void handleSubmit(event)}>
       <div className="rounded-3xl border border-border/70 bg-background/70 p-4">
-        <PaymentElement />
+        <div className="relative min-h-[220px]">
+          {isPaymentElementLoading ? (
+            <div className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl border border-dashed border-border/60 bg-background/85 px-4 text-sm text-muted-foreground">
+              Loading secure payment fields...
+            </div>
+          ) : null}
+
+          <div className="min-h-[220px]">
+            <PaymentElement
+              onLoaderStart={() => {
+                setIsElementReady(false);
+                setMessage(null);
+              }}
+              onReady={() => {
+                setIsElementReady(true);
+                setMessage(null);
+              }}
+              onLoadError={(event) => {
+                setIsElementReady(false);
+                setMessage(event.error.message || "Stripe payment form failed to load. Refresh the page and try again.");
+              }}
+              options={{
+                layout: {
+                  type: "tabs",
+                },
+              }}
+            />
+          </div>
+        </div>
       </div>
 
       {message ? <div className="rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-800">{message}</div> : null}
 
-      <Button className="w-full" disabled={!stripe || !elements || isSubmitting} type="submit">
+      {needsFreshCheckoutSession ? (
+        <Button className="w-full" onClick={onRestartCheckout} type="button" variant="outline">
+          Create a fresh checkout session
+        </Button>
+      ) : null}
+
+      <Button className="w-full" disabled={!stripe || !elements || isSubmitting || isPaymentElementLoading} type="submit">
         {isSubmitting ? "Confirming payment..." : "Pay securely"}
       </Button>
     </form>
