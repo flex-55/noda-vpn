@@ -89,7 +89,7 @@ export function CheckoutStatusCard({ checkoutId }: CheckoutStatusCardProps) {
         <div className="grid gap-4 rounded-3xl bg-background/70 p-5 sm:grid-cols-4">
           <StatusMetric label="Checkout" value={checkoutId} />
           <StatusMetric label="Workflow status" value={status} />
-          <StatusMetric label="Attempts" value={String(statusData?.workflowAttempts ?? 0)} />
+          {/* <StatusMetric label="Attempts" value={String(statusData?.workflowAttempts ?? 0)} /> */}
           <StatusMetric label="Polling attempts" value={`${pollingAttemptCount}/${MAX_STATUS_POLL_ATTEMPTS}`} />
         </div>
 
