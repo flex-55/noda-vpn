@@ -249,7 +249,7 @@ The web app is a Next.js 14 (App Router) storefront that:
 
 | Variable | Description |
 |---|---|
-| `NEXT_PUBLIC_CHECKOUT_API_BASE_URL` | Base URL of the checkout-service (default `http://localhost:4242`) |
+| `NEXT_PUBLIC_CHECKOUT_API_BASE_URL` | Base URL of the checkout-service (default `http://localhost:3000`) |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Stripe publishable key used to initialise `loadStripe` |
 
 ### Page Routes

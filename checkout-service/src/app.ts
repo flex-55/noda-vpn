@@ -7,6 +7,8 @@ import { handleStripeWebhook } from "./modules/checkout/checkout.controller.js";
 
 export const app = express();
 
+app.set("etag", false);
+
 app.use(
   pinoHttp({
     logger,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
@@ -14,29 +14,62 @@ type CheckoutStatusCardProps = {
   checkoutId: string;
 };
 
+const MAX_STATUS_POLL_ATTEMPTS = 5;
+const STATUS_POLL_INTERVAL_MS = 2000;
+
 export function CheckoutStatusCard({ checkoutId }: CheckoutStatusCardProps) {
   const router = useRouter();
+  const pollingAttemptCountRef = useRef(0);
+  const [pollingAttemptCount, setPollingAttemptCount] = useState(0);
+
   const statusQuery = useQuery({
     queryKey: ["checkout-status", checkoutId],
-    queryFn: () => getCheckoutStatus(checkoutId),
+    queryFn: async ({ signal }) => {
+      const nextAttemptCount = Math.min(pollingAttemptCountRef.current + 1, MAX_STATUS_POLL_ATTEMPTS);
+
+      pollingAttemptCountRef.current = nextAttemptCount;
+      setPollingAttemptCount(nextAttemptCount);
+
+      if (process.env.NODE_ENV === "development") {
+        console.log(`[checkout-status] poll attempt count: ${nextAttemptCount}/${MAX_STATUS_POLL_ATTEMPTS}`);
+      }
+
+      return getCheckoutStatus(checkoutId, { signal });
+    },
+    retry: false,
     refetchInterval: (query) => {
       const status = query.state.data?.status;
-      return status === "COMPLETED" || status === "FAILED" ? false : 2000;
+      const hasReachedMaxAttempts = pollingAttemptCountRef.current >= MAX_STATUS_POLL_ATTEMPTS;
+
+      if (status === "COMPLETED" || status === "FAILED" || hasReachedMaxAttempts) {
+        return false;
+      }
+
+      return STATUS_POLL_INTERVAL_MS;
     },
+    refetchOnReconnect: false,
+    refetchOnWindowFocus: false,
   });
 
+  const statusData = statusQuery.data;
+
   useEffect(() => {
-    if (statusQuery.data?.status === "COMPLETED") {
+    pollingAttemptCountRef.current = 0;
+    setPollingAttemptCount(0);
+  }, [checkoutId]);
+
+  useEffect(() => {
+    if (statusData?.status === "COMPLETED") {
       clearCheckoutKeys();
     }
 
-    if (statusQuery.data?.status === "FAILED") {
-      const reason = statusQuery.data.lastError ?? "Provisioning failed after payment confirmation.";
+    if (statusData?.status === "FAILED") {
+      const reason = statusData.lastError ?? "Provisioning failed after payment confirmation.";
       router.replace(`/checkout/failed?checkoutId=${checkoutId}&reason=${encodeURIComponent(reason)}`);
     }
-  }, [checkoutId, router, statusQuery.data]);
+  }, [checkoutId, router, statusData]);
 
-  const status = statusQuery.data?.status ?? "PENDING_PAYMENT";
+  const status = statusData?.status ?? "PENDING_PAYMENT";
   const statusMeta = getStatusMeta(status);
 
   return (
@@ -53,10 +86,11 @@ export function CheckoutStatusCard({ checkoutId }: CheckoutStatusCardProps) {
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="grid gap-4 rounded-3xl bg-background/70 p-5 sm:grid-cols-3">
+        <div className="grid gap-4 rounded-3xl bg-background/70 p-5 sm:grid-cols-4">
           <StatusMetric label="Checkout" value={checkoutId} />
           <StatusMetric label="Workflow status" value={status} />
-          <StatusMetric label="Attempts" value={String(statusQuery.data?.workflowAttempts ?? 0)} />
+          {/* <StatusMetric label="Attempts" value={String(statusData?.workflowAttempts ?? 0)} /> */}
+          <StatusMetric label="Polling attempts" value={`${pollingAttemptCount}/${MAX_STATUS_POLL_ATTEMPTS}`} />
         </div>
 
         {statusQuery.isLoading ? (
