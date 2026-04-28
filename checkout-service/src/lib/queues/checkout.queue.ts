@@ -22,6 +22,6 @@ export const checkoutQueue = new Queue<{
 
 export async function enqueueCheckoutWorkflow(input: { checkoutId: string; stripeEventId: string }): Promise<void> {
   await checkoutQueue.add(CHECKOUT_JOB_NAME, input, {
-    jobId: `${input.checkoutId}:${input.stripeEventId}`,
+    jobId: `${input.checkoutId}-${input.stripeEventId}`,
   });
 }
