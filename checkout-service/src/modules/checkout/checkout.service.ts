@@ -22,7 +22,7 @@ const PLAN_PRICES: Record<string, { monthly: number; yearly: number }> = {
     monthly: 999,
     yearly: 9990,
   },
-  vpn_pro: {
+  vpn_premium: {
     monthly: 1499,
     yearly: 14990,
   },
@@ -209,10 +209,37 @@ async function getCheckoutStatus(checkoutId: string): Promise<GetCheckoutStatusR
   return mapCheckoutStatusResponse(checkout);
 }
 
+async function verifyPayment(checkoutId: string): Promise<{ checkoutId: string; paymentVerified: boolean}> {
+  const checkout = await prisma.checkoutSession.findUnique({
+    where: {
+      id: checkoutId,
+    },
+    select: {
+      id: true,
+      stripePaymentIntentId: true,
+      status: true
+    }
+  })
+
+  if (!checkout || !checkout.stripePaymentIntentId) {
+    return { checkoutId, paymentVerified: false};
+  }
+
+  const payment = await stripeClient.paymentIntents.retrieve(checkout.stripePaymentIntentId);
+
+  if (payment.status === "succeeded") {
+    return { checkoutId, paymentVerified: true };
+  }
+
+  return { checkoutId, paymentVerified: false };
+}
+
 async function handleStripeWebhook(input: HandleWebhookInput): Promise<void> {
   if (!isPaymentIntentSucceededEvent(input.event)) {
     return;
   }
+
+  console.log("Received Stripe webhook event:", input.event.type, "for PaymentIntent:", input.event.data.object.id);
 
   const event = input.event;
   const paymentIntentId = event.data.object.id;
@@ -402,6 +429,7 @@ async function compensateFailedCheckout(input: { checkoutId: string; errorMessag
 export const checkoutService = {
   createCheckoutSession,
   getCheckoutStatus,
+  verifyPayment,
   handleStripeWebhook,
   resumeCheckoutWorkflow,
   compensateFailedCheckout,

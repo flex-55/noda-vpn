@@ -78,7 +78,7 @@ Creates a checkout session and a Stripe Payment Intent for the requested plan.
 ```json
 {
   "email": "user@example.com",
-  "planCode": "vpn_basic" | "vpn_pro",
+  "planCode": "vpn_basic" | "vpn_premium",
   "billingCycle": "monthly" | "yearly"
 }
 ```
@@ -103,7 +103,7 @@ The `idempotencyKey` is stored as a unique constraint on `CheckoutSession`. If a
 | Plan | Monthly (USD) | Yearly (USD) |
 |---|---|---|
 | `vpn_basic` | $9.99 | $99.90 |
-| `vpn_pro` | $14.99 | $149.90 |
+| `vpn_premium` | $14.99 | $149.90 |
 
 Amounts are stored and transmitted in cents (Stripe convention).
 
@@ -302,7 +302,7 @@ Error responses are decoded from the JSON body (`{ error: string }`) before bein
 
 Four static `Product` entries (2 plans × 2 billing cycles). Utility functions `normalizePlanIdParam` and `normalizeBillingCycleParam` accept URL query strings and return typed values or `null`, guarding the checkout page against invalid deep-links.
 
-A translation layer (`toBackendPlanCode`, `toBackendBillingCycle`) maps frontend enum values (`vpn_premium`, `MONTHLY`) to the backend's expected values (`vpn_pro`, `monthly`).
+A translation layer (`toBackendPlanCode`, `toBackendBillingCycle`) maps frontend enum values (`vpn_premium`, `MONTHLY`) to the backend's expected values (`vpn_premium`, `monthly`).
 
 ### Scripts
 

@@ -10,6 +10,24 @@ export const app = express();
 app.use(
   pinoHttp({
     logger,
+    customReceivedMessage: (req) => `request started: ${req.method} ${req.url}`,
+    customSuccessMessage: (req, res) => `request completed: ${req.method} ${req.url} -> ${res.statusCode}`,
+    customErrorMessage: (req, res, error) => `request failed: ${req.method} ${req.url} -> ${res.statusCode} (${error.message})`,
+    customReceivedObject: (req) => ({
+      method: req.method,
+      url: req.url,
+    }),
+    customSuccessObject: (req, res) => ({
+      method: req.method,
+      url: req.url,
+      statusCode: res.statusCode,
+    }),
+    customErrorObject: (req, res, error) => ({
+      method: req.method,
+      url: req.url,
+      statusCode: res.statusCode,
+      err: error,
+    }),
   }),
 );
 
