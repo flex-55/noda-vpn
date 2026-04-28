@@ -209,31 +209,6 @@ async function getCheckoutStatus(checkoutId: string): Promise<GetCheckoutStatusR
   return mapCheckoutStatusResponse(checkout);
 }
 
-async function verifyPayment(checkoutId: string): Promise<{ checkoutId: string; paymentVerified: boolean}> {
-  const checkout = await prisma.checkoutSession.findUnique({
-    where: {
-      id: checkoutId,
-    },
-    select: {
-      id: true,
-      stripePaymentIntentId: true,
-      status: true
-    }
-  })
-
-  if (!checkout || !checkout.stripePaymentIntentId) {
-    return { checkoutId, paymentVerified: false};
-  }
-
-  const payment = await stripeClient.paymentIntents.retrieve(checkout.stripePaymentIntentId);
-
-  if (payment.status === "succeeded") {
-    return { checkoutId, paymentVerified: true };
-  }
-
-  return { checkoutId, paymentVerified: false };
-}
-
 async function handleStripeWebhook(input: HandleWebhookInput): Promise<void> {
   if (!isPaymentIntentSucceededEvent(input.event)) {
     return;
@@ -429,7 +404,6 @@ async function compensateFailedCheckout(input: { checkoutId: string; errorMessag
 export const checkoutService = {
   createCheckoutSession,
   getCheckoutStatus,
-  verifyPayment,
   handleStripeWebhook,
   resumeCheckoutWorkflow,
   compensateFailedCheckout,

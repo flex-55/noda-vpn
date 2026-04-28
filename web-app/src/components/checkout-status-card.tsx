@@ -21,16 +21,7 @@ export function CheckoutStatusCard({ checkoutId }: CheckoutStatusCardProps) {
     queryFn: () => getCheckoutStatus(checkoutId),
     refetchInterval: (query) => {
       const status = query.state.data?.status;
-
-      if (status === "COMPLETED" || status === "FAILED") {
-        return false;
-      }
-
-      if (query.state.fetchFailureCount >= 5) {
-        return false
-      }
-
-      return 2000;
+      return status === "COMPLETED" || status === "FAILED" ? false : 2000;
     },
   });
 
