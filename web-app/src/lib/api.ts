@@ -54,17 +54,26 @@ export async function createCheckoutSession(
   return response.json();
 }
 
-export async function getCheckoutStatus(checkoutId: string): Promise<CheckoutStatusResponse> {
+export async function getCheckoutStatus(
+  checkoutId: string,
+  options: { signal?: AbortSignal } = {},
+): Promise<CheckoutStatusResponse> {
   let response: Response;
 
   try {
     response = await fetch(`${API_BASE_URL}/checkout/sessions/${checkoutId}`, {
       method: "GET",
+      cache: "no-store",
+      signal: options.signal,
       headers: {
-        "content-type": "application/json",
+        accept: "application/json",
       },
     });
-  } catch {
+  } catch (error) {
+    if (options.signal?.aborted) {
+      throw error;
+    }
+
     throw new Error(toNetworkErrorMessage("Could not fetch checkout status."));
   }
 

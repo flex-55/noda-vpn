@@ -31,6 +31,7 @@ export async function createCheckoutSessionHandler(req: Request, res: Response):
 
 export async function getCheckoutStatusHandler(req: Request, res: Response): Promise<void> {
   const checkoutId = req.params.checkoutId;
+  res.set("Cache-Control", "no-store");
 
   if (!checkoutId) {
     res.status(400).json({ error: "Missing checkoutId" });
